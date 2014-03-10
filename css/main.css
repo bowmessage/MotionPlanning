@@ -16,6 +16,12 @@ html {
     line-height: 1.4;
 }
 
+.canvasHolder{
+	width:500px;
+	height: 500px;
+	border: 1px solid black;
+}
+
 /*
  * Remove text-shadow in selection highlight: h5bp.com/i
  * These selection rule sets have to be separate.
