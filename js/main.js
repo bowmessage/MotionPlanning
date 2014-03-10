@@ -11,6 +11,35 @@ window.requestAnimFrame = (function(){
           };
 })();
 
+function Camera(){
+	this.zoom = 1;
+	this.x = 0;
+	this.y = 0;
+	this.width = 500;
+	this.height = 500;
+}
+
+Camera.prototype.draw = function(ctx){};
+
+function CameraController(){
+	this.camera = new Camera();
+}
+
+CameraController.prototype.handleEvent = function(event){
+	switch(event.type){
+		case "drag":
+			
+		break;
+		case "mousewheel":
+		case "DOMMouseScroll":
+			event.detail; //amout of scroll in y axis
+			this.camera.zoom *= (1+event.detail/100);
+		break;
+	}
+	//alert(event.type);
+};
+
+
 function WorldChange(time){
 	this.timeOffset = time;
 	this.matrix = [];
@@ -50,7 +79,8 @@ World.prototype.start = function(){
 	this.worldChanges.push(new WorldChange(4000));
 };
 
-World.prototype.draw = function(ctx){
+World.prototype.draw = function(ctx, camera){
+	//alert('aaa');
 	ctx.linewidth = 1;
 	ctx.fillStyle = "#FFFFFF";
 	ctx.strokeStyle = "#000000";
@@ -64,18 +94,18 @@ World.prototype.draw = function(ctx){
 	    			ctx.fillStyle = "#FF0000";
 	    		break;
 	    	}
-	    	ctx.fillRect(i*World.cellWidth, j * World.cellWidth, World.cellWidth, World.cellWidth);
-	    	ctx.strokeRect(i*World.cellWidth, j * World.cellWidth, World.cellWidth, World.cellWidth);
+	    	var realCellWidth =  World.cellWidth*camera.zoom;
+	    	var xOrg = i * realCellWidth - camera.x; var yOrg = j*realCellWidth - camera.y;
+	    	ctx.fillRect(xOrg, yOrg, realCellWidth, realCellWidth);
+	    	ctx.strokeRect(xOrg, yOrg, realCellWidth, realCellWidth);
 	    }
 	}
 };
 
-World.prototype.update = function(ctx){
+World.prototype.update = function(ctx,camera){
 	var now = Date.now();
 	var beenRunning = now - this.started;
-	
-	console.log('been runnin' + beenRunning);
-	
+		
 	if(this.curWC < this.worldChanges.length){
 		if(beenRunning >= this.worldChanges[this.curWC].timeOffset){
 			this.applyWorldChange(this.worldChanges[this.curWC]);
@@ -85,7 +115,7 @@ World.prototype.update = function(ctx){
 	}
 	
 	if(this.needsRedraw){
-		this.draw(ctx);
+		this.draw(ctx, camera);
 		this.needsRedraw = false;
 	}
 	
@@ -93,7 +123,6 @@ World.prototype.update = function(ctx){
 };
 
 World.prototype.applyWorldChange = function(wc){
-	//alert('wuu');
 	for(var i=0; i<World.cellPerimiter; i++) {
 	    for(var j=0; j<World.cellPerimiter; j++) {
 	    	this.matrix[i][j] += wc.matrix[i][j];
@@ -105,11 +134,18 @@ World.prototype.applyWorldChange = function(wc){
 
 $(document).ready(function(){
 	var w = new World(); w.start();
+	var cc = new CameraController();
 	
-	var cv = document.getElementById('c'); cv.width = 500; cv.height = 500;
+	var cv = document.getElementById('c'); cv.width = cc.camera.width; cv.height = cc.camera.height;
+	cv.addEventListener('drag', cc, false);
+	cv.addEventListener('mousewheel', cc, false);
+	cv.addEventListener('DOMMouseScroll', cc, false);
+			
 	var ctx = cv.getContext("2d");
+	
+	
 	(function draw(){
 		requestAnimFrame(draw);
-		w.update(ctx);
+		w.update(ctx,cc.camera);
 	})();	
 });
