@@ -18,30 +18,40 @@ function Camera(){
 	this.width = 500;
 	this.height = 500;
 	this.drawables = [];
-	this.dirty = true;
 }
 
 Camera.prototype.draw = function(ctx){
-	if(this.dirty){
-		var that = this;
-		this.drawables.forEach(function(i){
+	var that = this;
+	var res = false;
+	this.drawables.forEach(function(i){
+		// ///////console.log(i);
+		if(i.dirty){
 			i.draw(ctx, that);
 			console.log(i);
-		});
-		this.dirty = false;
-	}
+		}
+		i.update();
+	});
 };
 
 Camera.prototype.addDrawable = function(d){
 	this.drawables.push(d);
 };
 
-function CameraController(){
+function CameraController(canv){
 	this.camera = new Camera();
 	this.currentlyDragging = false;
 	this.curDragX = 0;
 	this.curDragY = 0;
+	this.canvasElement = canv;
 }
+
+CameraController.prototype.draw = function(){
+	this.camera.draw(this.canvasElement.getContext("2d"));
+};
+
+CameraController.prototype.relativeXY = function(px,py){
+	//return this.canvasElement.position.x
+};
 
 CameraController.prototype.handleEvent = function(event){
 	switch(event.type){
@@ -67,6 +77,7 @@ CameraController.prototype.handleEvent = function(event){
 		case "mousewheel":
 		case "DOMMouseScroll":
 			this.camera.zoom *= (1+event.detail/100);
+			console.log(event);
 			this.camera.dirty = true;
 			event.preventDefault();
 		break;
@@ -87,7 +98,7 @@ function WorldChange(time){
 	for(var i=0; i<World.cellPerimiter; i++) {
 	    this.matrix[i] = [];
 	    for(var j=0; j<World.cellPerimiter; j++) {
-	        this.matrix[i][j] = Math.floor(Math.random()*2);
+	        this.matrix[i][j] = (Math.random()<0.1)?1:0;//Math.floor(Math.random()*2);
 	    }
 	}
 }
@@ -110,7 +121,9 @@ function World(){
 	this.lastUpdated = 0; //Timestamp of last update.
 	
 	this.begin = new Point(2,4);
-	this.finish = new Point(32,352);
+	this.finish = new Point(10,40);
+	
+	this.dirty = true;
 }
 
 World.cellPerimiter = 50;
@@ -123,8 +136,9 @@ World.prototype.start = function(){
 	this.worldChanges.push(new WorldChange(4000));
 	this.worldChanges.push(new WorldChange(5000));
 	
+	
 	this.matrix[this.begin.x][this.begin.y] = 2;
-	this.matrix[this.finish.x][this.finish.y] = 2;
+	this.matrix[this.finish.x][this.finish.y] = 3;
 };
 
 World.prototype.draw = function(ctx, camera){
@@ -160,18 +174,15 @@ World.prototype.draw = function(ctx, camera){
 World.prototype.update = function(){
 	var now = Date.now();
 	var beenRunning = now - this.started;
-	var ret = false;
 		
 	if(this.curWC < this.worldChanges.length){
 		if(beenRunning >= this.worldChanges[this.curWC].timeOffset){
 			this.applyWorldChange(this.worldChanges[this.curWC]);
 			this.curWC++;
-			ret = true;
 		}
 	}
 	
 	this.lastUpdated = now;
-	return ret;
 };
 
 World.prototype.applyWorldChange = function(wc){
@@ -187,14 +198,39 @@ World.prototype.applyWorldChange = function(wc){
 	}
 };
 
+function StatInterface(w){
+	this.world = w;
+	this.dirty = true;
+}
+
+StatInterface.prototype.draw = function(ctx, camera){
+	//ctx.
+	console.log(ctx);
+	ctx.fillStyle = "#000000";
+	ctx.fillText(40,40,'asd');
+};
+
+StatInterface.prototype.update = function(){
+	this.dirty = false;
+};
+
 
 
 $(document).ready(function(){
-	var w = new World(); w.start();
-	var cc = new CameraController();
-	cc.camera.addDrawable(w);
 	
-	var cv = document.getElementById('c'); cv.width = cc.camera.width; cv.height = cc.camera.height;
+	
+	var cv = document.getElementById('c');
+
+	var cc = new CameraController(cv);
+	
+	var w = new World(); w.start();
+	
+	var si = new StatInterface(w);
+	
+	cv.width = cc.camera.width; cv.height = cc.camera.height;
+	cc.camera.addDrawable(w);
+	cc.camera.addDrawable(si);
+	
 	cv.addEventListener('mousedown', cc, false);
 	cv.addEventListener('mouseup', cc, false);
 	cv.addEventListener('mousemove', cc, false);
@@ -205,7 +241,6 @@ $(document).ready(function(){
 	
 	(function draw(){
 		requestAnimFrame(draw);
-		cc.camera.draw(ctx);
-		cc.camera.dirty = w.update();
+		cc.draw();
 	})();	
 });
