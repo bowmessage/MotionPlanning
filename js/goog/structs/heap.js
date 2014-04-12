@@ -127,6 +127,20 @@ goog.structs.Heap.prototype.remove = function() {
   return rootNode.getValue();
 };
 
+//Removes first occurence of obj
+goog.structs.Heap.prototype.removeObj = function(obj) {
+  var nodes = this.nodes_;
+  var count = nodes.length;
+  for(var i = 0; i < count; i++){
+    if(String(nodes[i].getValue()) == String(obj)){
+      //bastardized equality... sorry goog
+      nodes = nodes.splice(i,1);
+      return true;
+    }
+  }
+  return false;
+};
+
 
 /**
  * Retrieves but does not remove the root value of this heap.
