@@ -166,9 +166,9 @@ World.cellWidth = 10;
 World.prototype.start = function(){
   this.started = Date.now();
   this.lastUpdated = this.started;
-  this.worldChanges.push(new WorldChange(2000));
-  this.worldChanges.push(new WorldChange(4000));
   this.worldChanges.push(new WorldChange(5000));
+  this.worldChanges.push(new WorldChange(6000));
+  this.worldChanges.push(new WorldChange(7000));
   
   
   this.stateMatrix[this.begin.x][this.begin.y] = 2;
@@ -350,7 +350,15 @@ World.prototype.applyWorldChange = function(wc){
       if(curPt.isEqual(this.begin) || curPt.isEqual(this.finish)){
         continue;
       }*/
-      /*if(wc.stateMatrix[i][j] == 1){//we're changing at this point.
+
+      if(this.stateMatrix[i][j] == 0){
+        this.stateMatrix[i][j] = (wc.stateMatrix[i][j] == 0) ? 0 : 1;
+      }
+      else if(this.stateMatrix[i][j] == 1){
+        this.stateMatrix[i][j] = (wc.stateMatrix[i][j] == 0) ? 1 : 0;
+      }
+
+      if(wc.stateMatrix[i][j] == 1){//we're changing at this point.
         var curPt = new Point(j,i);
 
         this.updateVertex(curPt);
@@ -358,13 +366,6 @@ World.prototype.applyWorldChange = function(wc){
         for(var k = 0; k < neighbs.length; k++){
           this.updateVertex(neighbs[k]);
         }
-      }*/
-
-      if(this.stateMatrix[i][j] == 0){
-        this.stateMatrix[i][j] = (wc.stateMatrix[i][j] == 0) ? 0 : 1;
-      }
-      else if(this.stateMatrix[i][j] == 1){
-        this.stateMatrix[i][j] = (wc.stateMatrix[i][j] == 0) ? 1 : 0;
       }
     }
   }
@@ -379,7 +380,7 @@ World.prototype.tracePath = function(){
   while(!curPt.isEqual(this.begin)){
     //console.log(curPt);
     var neighbs = this.neighbors(curPt);
-    //if(neighbs.length > 0){
+    if(neighbs.length > 0){
       var nextPt = neighbs[0];
       var nextGVal = this.gMatrix[nextPt.y][nextPt.x];
       for(var i = 0; i < neighbs.length; i++){
@@ -390,9 +391,11 @@ World.prototype.tracePath = function(){
         }
       }
       curPt = nextPt;
+      if(this.path.indexOf(curPt) != -1) break;
       this.path.push(curPt);
-      //this.stateMatrix[curPt.x][curPt.y] = 3;
-    //}
+      console.log(this.path.length);
+    }
+    else break;
   }
 }
 
