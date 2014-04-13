@@ -152,7 +152,7 @@ function World(){
   this.lastUpdated = 0; //Timestamp of last update.
 
   this.begin = new Point(2,4);
-  this.finish = new Point(90,90);
+  this.finish = new Point(86,86);
 
 
   this.rhsMatrix[this.begin.y][this.begin.x] = 0;
@@ -166,8 +166,8 @@ function World(){
   this.MODE = "LPA*";
 }
 
-World.cellPerimeter = 100;
-World.cellWidth = 20;
+World.cellPerimeter = 90;
+World.cellWidth = 10;
 
 World.prototype.start = function(){
   this.started = Date.now();
