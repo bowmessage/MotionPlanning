@@ -127,15 +127,28 @@ goog.structs.Heap.prototype.remove = function() {
   return rootNode.getValue();
 };
 
-//Removes first occurence of obj
+//Removes all occurence of obj
 goog.structs.Heap.prototype.removeObj = function(obj) {
   var nodes = this.nodes_;
   var count = nodes.length;
   for(var i = 0; i < count; i++){
-    if(String(nodes[i].getValue()) == String(obj)){
-      //bastardized equality... sorry goog
-      nodes = nodes.splice(i,1);
-      return true;
+    //console.log(nodes[i].getValue().toString());
+    if(obj.isEqual(nodes[i].getValue())){
+      if(i == count-1){
+        //nodes[i] = nodes[count-2];
+        //nodes.splice(count-2,1);
+        nodes.pop();
+      }
+      else{
+        nodes[i] = nodes.pop();
+        if(i == 0 || nodes[this.getParentIndex_(i)].getKey() <= nodes[i].getKey())
+          this.moveDown_(i);
+        else
+          this.moveUp_(i);
+      }
+
+      //return true;
+      return this.removeObj(obj) || true;
     }
   }
   return false;

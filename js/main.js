@@ -2,8 +2,8 @@ function Camera(){
   this.zoom = 1;
   this.x = 0;
   this.y = 0;
-  this.width = 500;
-  this.height = 500;
+  this.width = 900;
+  this.height = 900;
   this.drawables = [];
 }
 
@@ -76,7 +76,13 @@ CameraController.prototype.handleEvent = function(event){
     case "mousewheel":
     case "DOMMouseScroll":
       var oldzoom = this.camera.zoom;
-      this.camera.zoom *= (1-event.deltaY/2000);
+      var zF = (1-event.deltaY/2000);
+      this.camera.zoom *= zF;
+      /*var percentX = event.offsetX / 500;
+      var percentY = event.offsetY / 500;
+      this.camera.x += zF* 500*percentX;
+      this.camera.y += zF* 500*percentY;*/
+
       //this.camera.width /= this.camera.zoom - oldzoom + 1;
       //this.camera.height /= this.camera.zoom - oldzoom + 1;
 
@@ -146,7 +152,7 @@ function World(){
   this.lastUpdated = 0; //Timestamp of last update.
 
   this.begin = new Point(2,4);
-  this.finish = new Point(10,40);
+  this.finish = new Point(90,90);
 
 
   this.rhsMatrix[this.begin.y][this.begin.x] = 0;
@@ -160,19 +166,18 @@ function World(){
   this.MODE = "LPA*";
 }
 
-World.cellPerimeter = 50;
-World.cellWidth = 10;
+World.cellPerimeter = 100;
+World.cellWidth = 20;
 
 World.prototype.start = function(){
   this.started = Date.now();
   this.lastUpdated = this.started;
-  this.worldChanges.push(new WorldChange(5000));
-  this.worldChanges.push(new WorldChange(6000));
-  this.worldChanges.push(new WorldChange(7000));
+  for(var i = 0; i < 20; i++) {
+    this.worldChanges.push(new WorldChange(5000 + i * 1000));
+  }
   
-  
-  this.stateMatrix[this.begin.x][this.begin.y] = 2;
-  this.stateMatrix[this.finish.x][this.finish.y] = 3;
+  this.stateMatrix[this.begin.y][this.begin.x] = 2;
+  this.stateMatrix[this.finish.y][this.finish.x] = 3;
 
   this.computeShortestPath();
 };
@@ -198,12 +203,12 @@ World.prototype.draw = function(ctx, camera){
   //console.log(this.path);
   for(var i = 0; i < this.path.length; i++){
     var curNode = this.path[i];
-    drawMatrix[curNode.x][curNode.y] = 4;
+    drawMatrix[curNode.y][curNode.x] = 4;
   }
 
   for(var i=0; i<World.cellPerimeter; i++) {
       for(var j=0; j<World.cellPerimeter; j++) {
-        switch(drawMatrix[i][j]){
+        switch(drawMatrix[j][i]){
           case 0:
             ctx.fillStyle = "#FFFFFF";
           break;
@@ -267,7 +272,7 @@ World.prototype.computeShortestPath = function(){
   while(this.pq.peekKey() < this.calculateKey(this.finish) || 
   this.rhsMatrix[this.finish.y][this.finish.x] != this.gMatrix[this.finish.y][this.finish.x]){
     var u = this.pq.dequeue();
-    var neighbs = this.neighbors(u);
+    var neighbs = this.neighboringTraversableTiles(u);
     if(this.gMatrix[u.y][u.x] > this.rhsMatrix[u.y][u.x]){
 
       this.gMatrix[u.y][u.x] = this.rhsMatrix[u.y][u.x];
@@ -291,11 +296,13 @@ World.prototype.computeShortestPath = function(){
 
 World.prototype.updateVertex = function(point){
   //console.log(point);
+  if(this.stateMatrix[point.y][point.x] == 1) return;
   if(!point.isEqual(this.begin)){
     var minVal = Number.MAX_VALUE;
     var count = this.predMatrix[point.y][point.x].length;
     for(var i = 0; i < count; i++){
       var curPoint = this.predMatrix[point.y][point.x][i];
+      if(this.stateMatrix[curPoint.y][curPoint.x] == 1)continue;
       if(this.gMatrix[curPoint.y][curPoint.x] + 1 < minVal){
         minVal = this.gMatrix[curPoint.y][curPoint.x] + 1;
       }
@@ -305,6 +312,7 @@ World.prototype.updateVertex = function(point){
 
 
   
+  //console.log(this.pq.removeObj(point));
   this.pq.removeObj(point);
 
 
@@ -320,7 +328,24 @@ World.prototype.calculateKey = function(point){
 
 
 
-World.prototype.neighbors = function(point){
+
+World.prototype.neighboringTraversableTiles = function(point){
+  var ret = [];
+  var n;
+  n = new Point(point.x-1, point.y);
+  if(this.valid(n) && this.traversable(n)) ret.push(n);
+  n = new Point(point.x, point.y-1);
+  if(this.valid(n) && this.traversable(n)) ret.push(n);
+  n = new Point(point.x+1, point.y);
+  if(this.valid(n) && this.traversable(n)) ret.push(n);
+  n = new Point(point.x, point.y+1);
+  if(this.valid(n) && this.traversable(n)) ret.push(n);
+
+  //console.log(ret);
+  return ret;
+}
+
+World.prototype.neighboringTiles = function(point){
   var ret = [];
   var n;
   n = new Point(point.x-1, point.y);
@@ -339,17 +364,16 @@ World.prototype.neighbors = function(point){
 World.prototype.valid = function(point){
   //console.log(this.stateMatrix[point.y][point.x]);
   return point.x >= 0 && point.x < World.cellPerimeter && 
-  point.y >= 0 && point.y < World.cellPerimeter
-    && this.stateMatrix[point.y][point.x] != 1;
+  point.y >= 0 && point.y < World.cellPerimeter;
+}
+
+World.prototype.traversable = function(point){
+  return this.stateMatrix[point.y][point.x] != 1;
 }
 
 World.prototype.applyWorldChange = function(wc){
   for(var i=0; i<World.cellPerimeter; i++) {
     for(var j=0; j<World.cellPerimeter; j++) {
-      /*var curPt = new Point(j,i);
-      if(curPt.isEqual(this.begin) || curPt.isEqual(this.finish)){
-        continue;
-      }*/
 
       if(this.stateMatrix[i][j] == 0){
         this.stateMatrix[i][j] = (wc.stateMatrix[i][j] == 0) ? 0 : 1;
@@ -358,11 +382,17 @@ World.prototype.applyWorldChange = function(wc){
         this.stateMatrix[i][j] = (wc.stateMatrix[i][j] == 0) ? 1 : 0;
       }
 
+    }
+  }
+
+  for(var i=0; i<World.cellPerimeter; i++) {
+    for(var j=0; j<World.cellPerimeter; j++) {
       if(wc.stateMatrix[i][j] == 1){//we're changing at this point.
         var curPt = new Point(j,i);
+        this. gMatrix[i][j] = 800;
 
         this.updateVertex(curPt);
-        var neighbs = this.neighbors(curPt);
+        var neighbs = this.neighboringTiles(curPt);
         for(var k = 0; k < neighbs.length; k++){
           this.updateVertex(neighbs[k]);
         }
@@ -370,20 +400,23 @@ World.prototype.applyWorldChange = function(wc){
     }
   }
 
-  this.tracePath();
+  this.computeShortestPath();
+
+  //this.tracePath();
 
 };
 
 World.prototype.tracePath = function(){
   this.path = [];
   var curPt = this.finish;
-  while(!curPt.isEqual(this.begin)){
-    //console.log(curPt);
-    var neighbs = this.neighbors(curPt);
+  var j = 0;
+  while(!curPt.isEqual(this.begin) && j < 900){
+    j++;
+    var neighbs = this.neighboringTraversableTiles(curPt);
     if(neighbs.length > 0){
       var nextPt = neighbs[0];
       var nextGVal = this.gMatrix[nextPt.y][nextPt.x];
-      for(var i = 0; i < neighbs.length; i++){
+      for(var i = 1; i < neighbs.length; i++){
         var consider = this.gMatrix[neighbs[i].y][neighbs[i].x];
         if(consider < nextGVal){
           nextPt = neighbs[i];
@@ -393,7 +426,6 @@ World.prototype.tracePath = function(){
       curPt = nextPt;
       if(this.path.indexOf(curPt) != -1) break;
       this.path.push(curPt);
-      console.log(this.path.length);
     }
     else break;
   }
@@ -405,24 +437,33 @@ function StatInterface(w){
 }
 
 StatInterface.prototype.draw = function(ctx, camera){
-  //ctx.
-  //console.log(ctx);
   ctx.fillStyle = "#000000";
-  ctx.fillText(40,40,'asd');
+  for(var i = 0; i < World.cellPerimeter; i++){
+    for(var j = 0; j < World.cellPerimeter; j++){
+      var realCellWidth =  Math.floor(World.cellWidth*camera.zoom);
+      var realG = this.world.gMatrix[j][i];
+      var realRHS = this.world.rhsMatrix[j][i];
+      if(realG > 9999)realG = 9999;
+      if(realRHS > 9999)realRHS = 9999;
+
+      //ctx.fillText('g:  '+realG,realCellWidth*i - camera.x, realCellWidth*(j+1) - camera.y-20);
+      //ctx.fillText('rhs:'+realRHS,realCellWidth*i - camera.x, realCellWidth*(j+1) - camera.y - 10);
+    }
+  }
 };
 
 StatInterface.prototype.update = function(){
-  this.dirty = false;
+  //this.dirty = false;
 };
 
-
+var w;
 
 document.addEventListener('DOMContentLoaded', function(){
   var cv = document.getElementById('c');
 
   var cc = new CameraController(cv);
   
-  var w = new World(); 
+  w = new World(); 
   w.start();
   
   var si = new StatInterface(w);
