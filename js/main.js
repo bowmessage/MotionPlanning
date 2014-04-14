@@ -412,15 +412,18 @@ World.prototype.applyWorldChange = function(wc){
   
   var endTime = window.performance.now();
 
-  var newItem = document.createElement("li");
-  var newTextItem = document.createTextNode(endTime - startTime);
-  newItem.appendChild(newTextItem);
-
-  document.getElementById("timing").appendChild(newItem);
-
-  //this.tracePath();
+  this.addResultRow([endTime-startTime, this.path.length]);
 
 };
+
+World.prototype.addResultRow = function(args){
+  var tbl = document.getElementById("results");
+  var row = tbl.insertRow();
+  for(var i = args.length-1; i >= 0; i--){
+    var cur = row.insertCell();
+    cur.innerHTML = args[i];
+  }
+}
 
 World.prototype.tracePath = function(){
   this.path = [];
