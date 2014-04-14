@@ -7,6 +7,12 @@ function Camera(){
   this.drawables = [];
 }
 
+var seed = 13802;
+function myRandom(){
+  var x = Math.sin(seed++) * 10000;
+  return x - Math.floor(x);
+}
+
 Camera.prototype.draw = function(ctx){
   var that = this;
   var res = false;
@@ -118,7 +124,7 @@ function WorldChange(time){
   for(var i=0; i<World.cellPerimeter; i++) {
       this.stateMatrix[i] = [];
       for(var j=0; j<World.cellPerimeter; j++) {
-          this.stateMatrix[i][j] = (Math.random()<0.1)?1:0;//Math.floor(Math.random()*2);
+        this.stateMatrix[i][j] = (myRandom()<0.03)?1:0;//Math.floor(Math.random()*2);
       }
   }
 }
@@ -151,8 +157,8 @@ function World(){
   this.started = 0;
   this.lastUpdated = 0; //Timestamp of last update.
 
-  this.begin = new Point(2,4);
-  this.finish = new Point(86,86);
+  this.begin = new Point(1,178);
+  this.finish = new Point(178,1);
 
 
   this.rhsMatrix[this.begin.y][this.begin.x] = 0;
@@ -166,13 +172,13 @@ function World(){
   this.MODE = "LPA*";
 }
 
-World.cellPerimeter = 90;
-World.cellWidth = 10;
+World.cellPerimeter = 180;
+World.cellWidth = 5;
 
 World.prototype.start = function(){
   this.started = Date.now();
   this.lastUpdated = this.started;
-  for(var i = 0; i < 20; i++) {
+  for(var i = 0; i < 15; i++) {
     this.worldChanges.push(new WorldChange(5000 + i * 1000));
   }
   
@@ -385,11 +391,13 @@ World.prototype.applyWorldChange = function(wc){
     }
   }
 
+  var startTime = window.performance.now();
+
   for(var i=0; i<World.cellPerimeter; i++) {
     for(var j=0; j<World.cellPerimeter; j++) {
       if(wc.stateMatrix[i][j] == 1){//we're changing at this point.
         var curPt = new Point(j,i);
-        this. gMatrix[i][j] = 800;
+        this. gMatrix[i][j] = Number.MAX_VALUE; 
 
         this.updateVertex(curPt);
         var neighbs = this.neighboringTiles(curPt);
@@ -401,6 +409,14 @@ World.prototype.applyWorldChange = function(wc){
   }
 
   this.computeShortestPath();
+  
+  var endTime = window.performance.now();
+
+  var newItem = document.createElement("li");
+  var newTextItem = document.createTextNode(endTime - startTime);
+  newItem.appendChild(newTextItem);
+
+  document.getElementById("timing").appendChild(newItem);
 
   //this.tracePath();
 
@@ -446,7 +462,7 @@ StatInterface.prototype.draw = function(ctx, camera){
       if(realG > 9999)realG = 9999;
       if(realRHS > 9999)realRHS = 9999;
 
-      //ctx.fillText('g:  '+realG,realCellWidth*i - camera.x, realCellWidth*(j+1) - camera.y-20);
+      ctx.fillText(realG,realCellWidth*i - camera.x + 5, realCellWidth*(j+1) - camera.y-20);
       //ctx.fillText('rhs:'+realRHS,realCellWidth*i - camera.x, realCellWidth*(j+1) - camera.y - 10);
     }
   }
@@ -466,11 +482,11 @@ document.addEventListener('DOMContentLoaded', function(){
   w = new World(); 
   w.start();
   
-  var si = new StatInterface(w);
+  //var si = new StatInterface(w);
   
   cv.width = cc.camera.width; cv.height = cc.camera.height;
   cc.camera.addDrawable(w);
-  cc.camera.addDrawable(si);
+  //cc.camera.addDrawable(si);
   
   cv.addEventListener('mousedown', cc, false);
   cv.addEventListener('mouseup', cc, false);

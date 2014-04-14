@@ -17,7 +17,7 @@ html {
 }
 
 .canvasHolder{
-	width:900px;
+	width: 900px;
 	height: 900px;
 	border: 1px solid black;
 	cursor: crosshair;
