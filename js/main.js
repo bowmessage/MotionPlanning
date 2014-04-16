@@ -262,10 +262,6 @@ World.prototype.start = function(){
   for(i = 0; i < 1000; i++) {
     this.worldChanges.push(new WorldChange(1000 + i * 100));
   }
-  /*this.worldChanges.push(new WorldChange(5000 + i * 1000));
-  for(i = 16; i < 30; i++) {
-    this.worldChanges.push(new WorldChange(5000 + i * 1000));
-  }*/
   
   this.stateMatrix[this.begin.y][this.begin.x] = 2;
   this.stateMatrix[this.finish.y][this.finish.x] = 3;
@@ -273,9 +269,6 @@ World.prototype.start = function(){
   this.computeShortestPath();
   this.tracePath();
 };
-
-World.prototype.stop = function(){
-}
 
 World.prototype.draw = function(ctx, camera){
   ctx.fillStyle = "#AAAAAA";
