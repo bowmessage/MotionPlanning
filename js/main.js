@@ -288,6 +288,11 @@ World.prototype.draw = function(ctx, camera){
     drawMatrix[curNode.y][curNode.x] = 4;
   }
 
+  /*for(var i = 0; i < visualizationList.length; i++){ shading code for examples in paper
+    var cur = visualizationList[i];
+    drawMatrix[cur.y][cur.x] = 5 + i;
+  }*/
+
   for(var i=0; i<World.cellPerimeter; i++) {
       for(var j=0; j<World.cellPerimeter; j++) {
         switch(drawMatrix[j][i]){
@@ -306,6 +311,11 @@ World.prototype.draw = function(ctx, camera){
           case 4:
             ctx.fillStyle = "#AAAAAA";
           break;
+          /*default: shading code for examples in paper
+            var power = (drawMatrix[j][i]/4 + 30);
+            ctx.fillStyle = "#FF" +Math.floor(power).toString(16) + Math.floor(power).toString(16);
+            console.log(Math.floor(power).toString(16));
+          break;*/
         }
         var realCellWidth =  Math.floor(World.cellWidth*camera.zoom);
         var xOrg = i * realCellWidth - camera.x; var yOrg = j*realCellWidth - camera.y;
@@ -334,11 +344,15 @@ World.prototype.update = function(){
   return false;
 };
 
+//var visualizationList = []; shading code for examples in paper
+
 World.prototype.computeShortestPath = function(){
+  //visualizationList = [];
   while(this.pq.peekKey().compare(this.calculateKey(this.finish)) == -1 ||
     //this.pq.peekKey() < this.calculateKey(this.finish) || 
     this.rhsMatrix[this.finish.y][this.finish.x] != this.gMatrix[this.finish.y][this.finish.x]){
     var u = this.pq.dequeue();
+    //visualizationList.push(u);
     World.numRemoves += 1;
     var neighbs = this.neighboringTraversableTiles(u);
     if(this.gMatrix[u.y][u.x] > this.rhsMatrix[u.y][u.x]){
