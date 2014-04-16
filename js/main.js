@@ -1,3 +1,54 @@
+//Seedable random function used (javascript does not supply one).
+var seed = 13807;
+function myRandom(){
+  var x = Math.sin(seed++) * 10000;
+  return x - Math.floor(x);
+}
+
+/*
+ * Comparable Tuple Class
+ *
+ * The comparable tuple class holds two values and provides
+ * a compare function for sorting lexicographically.
+ *
+ */
+function ComparableTuple(a,b){
+  this.first = a;
+  this.second = b;
+}
+
+/*
+ *
+ * compare(otherTuple);
+ *
+ * Compares this tuple and otherTuple and returns an integer value:
+ * Returns:
+ *    -1: This tuple is smaller than otherTuple
+ *    0: The tuples are equal
+ *    1: This tuple is larger than otherTuple
+ */
+ComparableTuple.prototype.compare = function(o){
+  if(this.first == o.first){
+    if(this.second == o.second) return 0;
+    else if(this.second > o.second) return 1;
+    else return -1;
+  }
+  else{
+    if(this.first > o.first) return 1;
+    else return -1;
+  }
+}
+
+/*
+ * Camera Class
+ * 
+ * The camera class holds layers of drawable objects so that
+ * they may be drawn one atop another onto an HTML canvas.
+ *
+ * Also allows panning and zooming of the layers.
+ *
+ */
+
 function Camera(){
   this.zoom = 1;
   this.x = 0;
@@ -7,11 +58,6 @@ function Camera(){
   this.drawables = [];
 }
 
-var seed = 13802;
-function myRandom(){
-  var x = Math.sin(seed++) * 10000;
-  return x - Math.floor(x);
-}
 
 Camera.prototype.draw = function(ctx){
   var that = this;
@@ -22,15 +68,6 @@ Camera.prototype.draw = function(ctx){
     if(curDrawable.dirty){
       curDrawable.draw(ctx, that);
     }
-
-    /*if(curDrawable.update()){
-      curDrawable.stop();
-      this.drawables.splice(i,1);
-      count--;
-    }
-    else{
-      i++;
-    }*/
     curDrawable.update();
     i++;
   }
@@ -39,6 +76,14 @@ Camera.prototype.draw = function(ctx){
 Camera.prototype.addDrawable = function(d){
   this.drawables.push(d);
 };
+
+/*
+ * Camera Controller Class
+ *
+ * This class provides an interface for the user to change the
+ * camera pan and zoom with their mouse.
+ *
+ */
 
 function CameraController(canv){
   this.camera = new Camera();
@@ -52,16 +97,10 @@ CameraController.prototype.draw = function(){
   this.camera.draw(this.canvasElement.getContext("2d"));
 };
 
-CameraController.prototype.relativeXY = function(px,py){
-  //return this.canvasElement.position.x
-};
-
 CameraController.prototype.handleEvent = function(event){
-  //console.log(event);
   switch(event.type){
     case "mousedown":
       this.currentlyDragging = true;
-  (event);
       this.curDragX = event.offsetX;
       this.curDragY = event.offsetY;
       this.camera.dirty = true;
@@ -84,25 +123,22 @@ CameraController.prototype.handleEvent = function(event){
       var oldzoom = this.camera.zoom;
       var zF = (1-event.deltaY/2000);
       this.camera.zoom *= zF;
-      /*var percentX = event.offsetX / 500;
-      var percentY = event.offsetY / 500;
-      this.camera.x += zF* 500*percentX;
-      this.camera.y += zF* 500*percentY;*/
-
-      //this.camera.width /= this.camera.zoom - oldzoom + 1;
-      //this.camera.height /= this.camera.zoom - oldzoom + 1;
-
-
-
-      //this.camera.x -= event.deltaY*event.offsetX/this.camera.width/3;
-      //this.camera.y -= event.deltaY*event.offsetY/this.camera.height/3;
       this.camera.dirty = true;
       event.preventDefault()
     break;
   }
-  
-  //alert(event.type);
 };
+
+/*
+ * Point Class
+ *
+ * This point class holds only an x and y value,
+ * represented in cartesian coordinates with the origin at
+ * the top left of the screen.
+ * 
+ * X increases to the right. Y increases downwards.
+ *
+ */
 
 function Point(x,y){
   this.x = x;
@@ -117,27 +153,63 @@ Point.prototype.toString = function(){
   return "(" + this.x + ", " + this.y + ")";
 }
 
+/*
+ * World Change Class
+ *
+ * This class holds a matrix of change values for a given time.
+ *
+ * The change value is randomly set at each cell. If it is 1,
+ * the cell of the world will change (toggle) when this 
+ * changeset is applied.
+ *
+ * If it is 0, no change will occur at the cell.
+ *
+ */
 
-function WorldChange(time, isClear){
+function WorldChange(time){
   this.timeOffset = time;
   this.stateMatrix = [];
-  this.isClear = isClear;
-  if(!isClear){
-    for(var i=0; i<World.cellPerimeter; i++) {
-        this.stateMatrix[i] = [];
-        for(var j=0; j<World.cellPerimeter; j++) {
-          this.stateMatrix[i][j] = (myRandom()<0.03)?1:0;//Math.floor(Math.random()*2);
-        }
+  for(var i=0; i<World.cellPerimeter; i++) {
+    this.stateMatrix[i] = [];
+    for(var j=0; j<World.cellPerimeter; j++) {
+      var curRand = myRandom();
+      if(curRand < 0.03){//3% chance to toggle the block
+        this.stateMatrix[i][j] = 1;
+      }
+      else if(curRand < .35){//32% chance to clear the block
+        this.stateMatrix[i][j] = 2;
+      }
+      else{//65% chance to do nothing
+        this.stateMatrix[i][j] = 0;
+      }
     }
   }
 }
 
-function World(){
 
+/*
+ * World Class: Globals
+ */
+
+World.cellPerimeter = 60; //num of cells in grid graph square
+World.cellWidth = 10; //num pixels wide for each cell at default zoom
+World.numRemoves = 0; //number of priority queue removes during this cycle (for stats)
+
+/*
+ * World Class
+ *
+ * The world class represents a grid graph world with auxiliary
+ * matrix values 
+ *
+ */
+
+function World(){
+  this.MODE = "LPA*";
+  //modified version of Google's JavaScript Priority Queue implementation.
   this.pq = new goog.structs.PriorityQueue();
-  this.rhsMatrix = [];
-  this.gMatrix = [];
-  this.stateMatrix = [];
+  this.rhsMatrix = []; //each entry an int
+  this.gMatrix = []; //each entry an int 
+  this.stateMatrix = []; //each entry an int, 0 = free, 1 = blocked.
   this.predMatrix = []; //this one is 3d, of points.
   
   for(var i=0; i<World.cellPerimeter; i++) {
@@ -146,6 +218,7 @@ function World(){
       this.stateMatrix[i] = [];
       this.predMatrix[i] = [];
       for(var j=0; j<World.cellPerimeter; j++) {
+          //initialize values
           this.rhsMatrix[i][j] = Number.MAX_VALUE;
           this.gMatrix[i][j] = Number.MAX_VALUE;
           this.stateMatrix[i][j] = 0;
@@ -161,32 +234,38 @@ function World(){
   this.begin = new Point(1,1);
   this.finish = new Point(28,28);
 
-
   this.rhsMatrix[this.begin.y][this.begin.x] = 0;
-  this.pq.enqueue(0, this.begin);
-
+  if(this.MODE == "LPA*"){ //LPA* uses a two value priority queue key, compared lexicographically
+    this.pq.enqueue(new ComparableTuple(this.heuristic(this.begin), 0), this.begin);
+  }
+  else{ //Dynamic SWSF - FP, using tuple for single value for compatibility
+    this.pq.enqueue(new ComparableTuple(0, 0), this.begin);
+  }
   
   this.dirty = true;
 
   this.path = [];
 
-  this.MODE = "LPA*";
 }
 
-World.cellPerimeter = 30;
-World.cellWidth = 30;
-
+/*
+ * start()
+ * Initializes the world's local variables and its begin and finish points.
+ * Then computes the inital shortest path and draws it.
+ *
+ * Does not return a value;
+ */
 World.prototype.start = function(){
   this.started = Date.now();
   this.lastUpdated = this.started;
   var i = 0;
-  for(i = 0; i < 15; i++) {
-    this.worldChanges.push(new WorldChange(5000 + i * 1000, false));
+  for(i = 0; i < 1000; i++) {
+    this.worldChanges.push(new WorldChange(1000 + i * 100));
   }
-  this.worldChanges.push(new WorldChange(5000 + i * 1000, true));
+  /*this.worldChanges.push(new WorldChange(5000 + i * 1000));
   for(i = 16; i < 30; i++) {
-    this.worldChanges.push(new WorldChange(5000 + i * 1000, false));
-  }
+    this.worldChanges.push(new WorldChange(5000 + i * 1000));
+  }*/
   
   this.stateMatrix[this.begin.y][this.begin.x] = 2;
   this.stateMatrix[this.finish.y][this.finish.x] = 3;
@@ -211,9 +290,6 @@ World.prototype.draw = function(ctx, camera){
     drawMatrix[i] = this.stateMatrix[i].slice();
   }
   
-
-
-  //console.log(this.path);
   for(var i = 0; i < this.path.length -1; i++){
     var curNode = this.path[i];
     drawMatrix[curNode.y][curNode.x] = 4;
@@ -254,10 +330,6 @@ World.prototype.update = function(){
     if(beenRunning >= this.worldChanges[this.curWC].timeOffset){
       this.applyWorldChange(this.worldChanges[this.curWC]);
       this.curWC++;
-
-      //this.computeShortestPath();
-      //this.updateChangedEdges
-      //console.log('aw');
     }
   }
   else{
@@ -269,30 +341,21 @@ World.prototype.update = function(){
   return false;
 };
 
-/*World.prototype.stepPath = function(){
-  if(this.MODE == "LPA*"){
-    //Point cur = this.path[this.path.length - 1]; this.path.push(cur);
-    this.pq
-  }
-  //this.path.push(new Point(10,10));
-}*/
-
 World.prototype.computeShortestPath = function(){
-  while(this.pq.peekKey() < this.calculateKey(this.finish) || 
-  this.rhsMatrix[this.finish.y][this.finish.x] != this.gMatrix[this.finish.y][this.finish.x]){
+  while(this.pq.peekKey().compare(this.calculateKey(this.finish)) == -1 ||
+    //this.pq.peekKey() < this.calculateKey(this.finish) || 
+    this.rhsMatrix[this.finish.y][this.finish.x] != this.gMatrix[this.finish.y][this.finish.x]){
     var u = this.pq.dequeue();
+    World.numRemoves += 1;
     var neighbs = this.neighboringTraversableTiles(u);
     if(this.gMatrix[u.y][u.x] > this.rhsMatrix[u.y][u.x]){
 
       this.gMatrix[u.y][u.x] = this.rhsMatrix[u.y][u.x];
     }
     else{
-
       this.gMatrix[u.y][u.x] = Number.MAX_VALUE;
       this.updateVertex(u);
-
     }
-
 
     for(var i = 0; i < neighbs.length; i++){
       this.predMatrix[neighbs[i].y][neighbs[i].x].push(u);
@@ -302,14 +365,13 @@ World.prototype.computeShortestPath = function(){
 }
 
 World.prototype.updateVertex = function(point){
-  //console.log(point);
   if(this.stateMatrix[point.y][point.x] == 1) return;
   if(!point.isEqual(this.begin)){
     var minVal = Number.MAX_VALUE;
     var count = this.predMatrix[point.y][point.x].length;
     for(var i = 0; i < count; i++){
       var curPoint = this.predMatrix[point.y][point.x][i];
-      if(this.stateMatrix[curPoint.y][curPoint.x] == 1)continue;
+      if(this.stateMatrix[curPoint.y][curPoint.x] == 1) continue;
       if(this.gMatrix[curPoint.y][curPoint.x] + 1 < minVal){
         minVal = this.gMatrix[curPoint.y][curPoint.x] + 1;
       }
@@ -317,24 +379,31 @@ World.prototype.updateVertex = function(point){
     this.rhsMatrix[point.y][point.x] = minVal;
   }
 
-
-  
-  //console.log(this.pq.removeObj(point));
   this.pq.removeObj(point);
-
 
   if(this.gMatrix[point.y][point.x] != this.rhsMatrix[point.y][point.x]) {
     this.pq.enqueue(this.calculateKey(point), point);
   }
+}
 
+World.prototype.heuristic = function(point){
+  return Math.max(Math.abs(point.x-this.finish.x),Math.abs(point.y-this.finish.y));
 }
 
 World.prototype.calculateKey = function(point){
-  return Math.min(this.gMatrix[point.y][point.x], this.rhsMatrix[point.y][point.x]);
+  if(this.MODE == "LPA*"){
+    return new ComparableTuple(
+      Math.min(this.gMatrix[point.y][point.x], this.rhsMatrix[point.y][point.x]) + this.heuristic(point),
+      Math.min(this.gMatrix[point.y][point.x], this.rhsMatrix[point.y][point.x])
+    );
+  }
+  else{ // Mode is Dynamic SWSF - FP
+    return new ComparableTuple(
+      Math.min(this.gMatrix[point.y][point.x], this.rhsMatrix[point.y][point.x]),
+      0
+    );//not required to use tuple for swsf-fp, but doing so for compatibilty.
+  }
 }
-
-
-
 
 World.prototype.neighboringTraversableTiles = function(point){
   var ret = [];
@@ -348,7 +417,6 @@ World.prototype.neighboringTraversableTiles = function(point){
   n = new Point(point.x, point.y+1);
   if(this.valid(n) && this.traversable(n)) ret.push(n);
 
-  //console.log(ret);
   return ret;
 }
 
@@ -364,12 +432,10 @@ World.prototype.neighboringTiles = function(point){
   n = new Point(point.x, point.y+1);
   if(this.valid(n)) ret.push(n);
 
-  //console.log(ret);
   return ret;
 }
 
 World.prototype.valid = function(point){
-  //console.log(this.stateMatrix[point.y][point.x]);
   return point.x >= 0 && point.x < World.cellPerimeter && 
   point.y >= 0 && point.y < World.cellPerimeter;
 }
@@ -378,61 +444,52 @@ World.prototype.traversable = function(point){
   return this.stateMatrix[point.y][point.x] != 1;
 }
 
+
 World.prototype.applyWorldChange = function(wc){
   for(var i=0; i<World.cellPerimeter; i++) {
     for(var j=0; j<World.cellPerimeter; j++) {
-
-      if(wc.isClear){
-        this.stateMatrix[i][j] = 0;
+      if(this.stateMatrix[i][j] > 1){
+        continue;//special start / end blocks, skip these!
       }
-      else{
-
-        if(this.stateMatrix[i][j] == 0){
-          this.stateMatrix[i][j] = (wc.stateMatrix[i][j] == 0) ? 0 : 1;
-        }
-        else if(this.stateMatrix[i][j] == 1){
-          this.stateMatrix[i][j] = (wc.stateMatrix[i][j] == 0) ? 1 : 0;
-        }
+      switch(wc.stateMatrix[i][j]){
+        case 1://toggle this cell
+          this.stateMatrix[i][j] = (this.stateMatrix[i][j] == 1) ? 0 : 1;
+          break;
+        case 2://clear this cell
+          this.stateMatrix[i][j] = 0;
+          break;
       }
-
     }
   }
 
   var startTime = window.performance.now();
 
-  var numChanges = 0;
+  var numWorldChangeTiles = 0;
 
-  if(wc.isClear){
-    for(var i=0; i<World.cellPerimeter; i++) {
-      for(var j=0; j<World.cellPerimeter; j++) {
+  World.numRemoves = 0;
+  
+  for(var i=0; i<World.cellPerimeter; i++) {
+    for(var j=0; j<World.cellPerimeter; j++) {
+      if(wc.stateMatrix[i][j] != 0){//we're changing at this point.
+        numWorldChangeTiles++;
         var curPt = new Point(j,i);
-        this.updateVertex(curPt);
-      }
-    }
-  }
-  else{
-    for(var i=0; i<World.cellPerimeter; i++) {
-      for(var j=0; j<World.cellPerimeter; j++) {
-        if(wc.stateMatrix[i][j] == 1){//we're changing at this point.
-          numChanges++;
-          var curPt = new Point(j,i);
-          this. gMatrix[i][j] = Number.MAX_VALUE; 
+        this. gMatrix[i][j] = Number.MAX_VALUE; 
 
-          this.updateVertex(curPt);
-          var neighbs = this.neighboringTiles(curPt);
-          for(var k = 0; k < neighbs.length; k++){
-            this.updateVertex(neighbs[k]);
-          }
+        this.updateVertex(curPt);
+        var neighbs = this.neighboringTiles(curPt);
+        for(var k = 0; k < neighbs.length; k++){
+          this.updateVertex(neighbs[k]);
         }
       }
     }
   }
+  
 
   this.computeShortestPath();
   
   var endTime = window.performance.now();
 
-  this.addResultRow([endTime-startTime, this.path.length, numChanges, this.pq.getCount()]);
+  this.addResultRow([endTime-startTime, this.path.length, numWorldChangeTiles, this.pq.getCount(), World.numRemoves]);
 
   this.tracePath();
 
@@ -440,7 +497,7 @@ World.prototype.applyWorldChange = function(wc){
 
 World.prototype.addResultRow = function(args){
   var tbl = document.getElementById("results");
-  var row = tbl.insertRow();
+  var row = tbl.insertRow(-1);
   for(var i = args.length-1; i >= 0; i--){
     var cur = row.insertCell();
     cur.innerHTML = args[i];
@@ -472,46 +529,19 @@ World.prototype.tracePath = function(){
   }
 }
 
-function StatInterface(w){
-  this.world = w;
-  this.dirty = true;
-}
 
-StatInterface.prototype.draw = function(ctx, camera){
-  ctx.fillStyle = "#000000";
-  for(var i = 0; i < World.cellPerimeter; i++){
-    for(var j = 0; j < World.cellPerimeter; j++){
-      var realCellWidth =  Math.floor(World.cellWidth*camera.zoom);
-      var realG = this.world.gMatrix[j][i];
-      var realRHS = this.world.rhsMatrix[j][i];
-      if(realG > 9999)realG = 9999;
-      if(realRHS > 9999)realRHS = 9999;
-
-      ctx.fillText(realG,realCellWidth*i - camera.x + 5, realCellWidth*(j+1) - camera.y-20);
-      //ctx.fillText('rhs:'+realRHS,realCellWidth*i - camera.x, realCellWidth*(j+1) - camera.y - 10);
-    }
-  }
-};
-
-StatInterface.prototype.update = function(){
-  //this.dirty = false;
-};
-
+//Global w for our single world.
 var w;
 
 document.addEventListener('DOMContentLoaded', function(){
   var cv = document.getElementById('c');
-
   var cc = new CameraController(cv);
-  
   w = new World(); 
   w.start();
-  
-  //var si = new StatInterface(w);
-  
+  document.title = w.MODE;//Set the webpage title so I'm sure what mode I'm dealing with.
+
   cv.width = cc.camera.width; cv.height = cc.camera.height;
   cc.camera.addDrawable(w);
-  //cc.camera.addDrawable(si);
   
   cv.addEventListener('mousedown', cc, false);
   cv.addEventListener('mouseup', cc, false);
@@ -521,9 +551,10 @@ document.addEventListener('DOMContentLoaded', function(){
   
   var ctx = cv.getContext("2d");
   
+  //Tell the camera controller to draw, and then pass this draw()
+  //function to the browser to call on next draw frame.
   (function draw(){
     cc.draw();
     requestAnimationFrame(draw);
   })();
-  //requestAnimationFrame(draw);
 });

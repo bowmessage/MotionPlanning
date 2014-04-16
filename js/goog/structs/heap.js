@@ -141,7 +141,7 @@ goog.structs.Heap.prototype.removeObj = function(obj) {
       }
       else{
         nodes[i] = nodes.pop();
-        if(i == 0 || nodes[this.getParentIndex_(i)].getKey() <= nodes[i].getKey())
+        if(i == 0 || nodes[this.getParentIndex_(i)].getKey().compare(nodes[i].getKey()) <= 0)
           this.moveDown_(i);
         else
           this.moveUp_(i);
@@ -197,12 +197,14 @@ goog.structs.Heap.prototype.moveDown_ = function(index) {
 
     // Determine the index of the smaller child.
     var smallerChildIndex = rightChildIndex < count &&
-        nodes[rightChildIndex].getKey() < nodes[leftChildIndex].getKey() ?
+        nodes[rightChildIndex].getKey().compare(nodes[leftChildIndex].getKey()) < 0 ?
         rightChildIndex : leftChildIndex;
 
     // If the node being moved down is smaller than its children, the node
     // has found the correct index it should be at.
-    if (nodes[smallerChildIndex].getKey() > node.getKey()) {
+    //if (nodes[parentIndex].getKey() > node.getKey()) {
+    //if (nodes[smallerChildIndex].getKey() > node.getKey()) {
+    if (nodes[smallerChildIndex].getKey().compare(node.getKey()) > 0){
       break;
     }
 
@@ -227,7 +229,8 @@ goog.structs.Heap.prototype.moveUp_ = function(index) {
   while (index > 0) {
     // If the parent is less than the node being moved up, move the parent down.
     var parentIndex = this.getParentIndex_(index);
-    if (nodes[parentIndex].getKey() > node.getKey()) {
+    //if (nodes[parentIndex].getKey() > node.getKey()) {
+    if (nodes[parentIndex].getKey().compare(node.getKey()) > 0){
       nodes[index] = nodes[parentIndex];
       index = parentIndex;
     } else {
@@ -320,7 +323,7 @@ goog.structs.Heap.prototype.containsValue = function(val) {
  */
 goog.structs.Heap.prototype.containsKey = function(key) {
   return goog.array.some(this.nodes_, function(node) {
-    return node.getKey() == key;
+    return node.getKey().compare(key) == 0;
   });
 };
 
